@@ -1,0 +1,114 @@
+/*
+
+I used sqlite and node js for the implementation
+
+and I considered the app running on localhost:3000
+
+*/
+
+const express = require("express");
+const { open } = require("sqlite");
+const sqlite3 = require("sqlite3");
+const path = require("path");
+
+const databasePath = path.join(__dirname, "userDetails.db");
+
+const app = express();
+
+app.use(express.json());
+
+let database = null;
+
+const initializeDbAndServer = async () => {
+  try {
+    database = await open({
+      filename: databasePath,
+      driver: sqlite3.Database,
+    });
+
+    app.listen(3000, () =>
+      console.log("Server Running at http://localhost:3000/")
+    );
+
+  } catch (error) {
+    console.log(`DB Error: ${error.message}`);
+    process.exit(1);
+  }
+};
+
+initializeDbAndServer();
+
+const convertDistrictDbObjectToResponseObject = (dbObject) => {
+  return {
+    id: dbObject.id,
+    firtsName: dbObject.firtsName,
+    lastName: dbObject.lastName,
+    middleName: dbObject.middleName,
+    address: dbObject.address,
+    email: dbObject.email,
+    phone: dbObject.phone,
+    height: dbObject.height,
+    weight: dbObject.weight,
+  };
+};
+
+app.post("/form/save-details", async (request, response) => {
+  const { id, firstName, lastName, middleName, address, email, phone, height, weight } = request.body;
+  const postUserQuery = `
+  INSERT INTO
+    user (id, firstName, lastName, middleName, address, email, phone, height, weight)
+  VALUES
+    (${id}, ${firstName}, ${lastName}, ${middleName}, ${address}, ${email}, ${phone}, ${height}, ${weight} );`;
+  await database.run(postUserQuery);
+  response.send("User Successfully Added");
+});
+
+app.delete("/form/:id/", async (request, response) => {
+  const { id } = request.params;
+  const deleteUserQuery = `
+  DELETE FROM
+    user
+  WHERE
+    id = ${id} 
+  `;
+  await database.run(deleteUserQuery);
+  response.send("User Removed");
+});
+
+module.exports = app;
+
+
+/*
+
+app.http
+
+-----------------
+
+considering the app's running in localhost:3000
+
+-----------------
+
+###
+
+POST http://localhost:3000/form/save-details
+
+Content-Type: application/json
+
+{
+    'id': 1,
+    'firtsName': 'Ajay',
+    'lastName': 'K',
+    'middleName': 'Kumar',
+    'address': '5/11, nt street, apk, vrngnr, tn-626105',
+    'email': 'ksajaykuma33@gmail.com',
+    'phone': 6369342916,
+    'height': '5'7',
+    'weight': 50,
+}
+
+###
+
+DELETE http://localhost:3000/form/3/
+
+
+*/
